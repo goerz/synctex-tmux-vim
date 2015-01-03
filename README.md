@@ -7,9 +7,9 @@ and searches through all tmux sessions for a window running the command
 window, and instructs vim to jump to the given line number.
 
     Usage: synctex_tmux_vim.py [options] <LINE_NR> <TEXFILE>
-    
+
     Jump to a position in a .tex file that is open in vim in a tmux window.
-    
+
     Options:
       -h, --help     show this help message and exit
       --log=LOGFILE  Write logging information to the given file
@@ -24,8 +24,7 @@ the command that was used to start the vim session. If that command ends with
 the target file name, it assumes that vim is currently editing that file. If you
 opened multiple tabs, splits, buffer, etc., it may do the wrong thing.
 
-Installation
-============
+## Installation ##
 
 The script is intended to be called from a PDF viewer that support [SyncTeX][]
 It has been tested with [Skim][].
@@ -45,9 +44,29 @@ to this script, you can give the full path as an option,
 
     --tmux=/usr/local/bin/tmux %line "%file"
 
+## Forward Synchronization ##
 
-Dependencies
-============
+In order to enable forward synchronization, the tex document must first be
+compiled with the option `--synctex=1`.
+
+The Skim support utility to jumping to a specific location in the pdf file is
+set in my `.bashrc`.
+
+    export SYNCTEXREADER=/Applications/Skim.app/Contents/SharedSupport/displayline
+
+This is then used in a keyboard macro in my `.vimrc`,
+
+    autocmd FileType tex nnoremap <Leader>s :w<CR>:silent !$SYNCTEXREADER -g <C-r>=line('.')<CR> %<.pdf %<CR><C-l>
+
+With this definition, and using `,` as the leader key, pressing `,s` will now
+open Skim at the position corresponding to where the vim cursor is currently
+positioned.
+
+Note that for complex documents that are split up in multiple tex files, the vim
+macro must be modified to open the "main" pdf file.
+
+
+## Dependencies ##
 
 The script depends on the [psutil][] package.
 
