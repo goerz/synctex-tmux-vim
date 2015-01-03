@@ -1,4 +1,4 @@
-#!/Users/diss/Diss/venv/bin/python
+#!/usr/bin/env python
 """Jump to a position in a .tex file that is open in vim in a tmux window."""
 
 __version__ = 1.0.0
