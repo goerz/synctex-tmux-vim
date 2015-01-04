@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Jump to a position in a .tex file that is open in vim in a tmux window."""
+"""Jump to a position in a .tex file that is open in vim in a tmux pane."""
 
 __version__ = '1.0.0'
 __author__ = "Michael Goerz <mail@michaelgoerz.net>"
@@ -13,19 +13,20 @@ import logging
 
 def find_vim(filename, tmux_exec):
     """
-    Return tuple (session, window_index) of the tmux window that runs
+    Return tuple (session, window_index, pane_id) of the tmux pane that runs
     'vim [filename]'
     """
     logger = logging.getLogger(__name__)
     tmux_pids = tmux_processes(tmux_exec)
-    for (session_name, window_index, pid) in tmux_pids:
+    for (session_name, window_index, pane_id, pid) in tmux_pids:
         logger.debug("Examining tmux sessions %s, windows %d",
                       session_name, window_index)
         if check_process(pid, filename):
             logger.debug("Found vim instance editing %s "
-                         +"running in window %d of tmux session %s",
-                         filename, window_index, session_name)
-            return (session_name, window_index)
+                         +"running in window %d of tmux session %s, "
+                         +"in pane %s",
+                         filename, window_index, session_name, pane_id)
+            return (session_name, window_index, pane_id)
     return None
 
 
@@ -57,41 +58,48 @@ def check_process(pid, filename):
         return False
 
 
-def jump_to(tmux_exec, session_name, window_index, line_nr):
+def jump_to(tmux_exec, session_name, window_index, pane_id, line_nr):
     """
-    Given a tmux session name and window index, assume that that window is
-    running vim. Send keystrokes to tmux that cause the vim to jump to the
-    given line number.
+    Given a tmux session name, a window index, and a pane id, assume that that
+    pane is running vim. Send keystrokes to tmux that cause the vim to jump to
+    the given line number.
     """
     logger = logging.getLogger(__name__)
 
-    cmd1 = [tmux_exec, 'select-window',
+    cmd = [tmux_exec, 'select-window',
             '-t', "%s:%d" % (session_name, window_index)]
-    logger.debug("Running command '%s'", " ".join(cmd1))
-    ret1 = subprocess.call(cmd1)
-    logger.debug("subprocess returned with code %d", ret1)
+    logger.debug("Running command '%s'", " ".join(cmd))
+    ret = subprocess.call(cmd)
+    logger.debug("subprocess returned with code %d", ret)
 
-    cmd2 = [tmux_exec, 'send-keys',
+    cmd = [tmux_exec, 'select-pane',
+            '-t', "%s" % pane_id]
+    logger.debug("Running command '%s'", " ".join(cmd))
+    ret = subprocess.call(cmd)
+    logger.debug("subprocess returned with code %d", ret)
+
+    cmd = [tmux_exec, 'send-keys',
             '-t', "%s:%d" % (session_name, window_index),
             "Escape", "Escape", str(line_nr),  "gg", "zz"]
-    logger.debug("Running command '%s'", " ".join(cmd2))
-    ret2 = subprocess.call(cmd2)
-    logger.debug("subprocess returned with code %d", ret2)
+    logger.debug("Running command '%s'", " ".join(cmd))
+    ret = subprocess.call(cmd)
+    logger.debug("subprocess returned with code %d", ret)
 
 
 def tmux_processes(tmux_exec):
     """
-    Return a list of tuples (session_name, window_index, pid) for processes
-    running in tmux sessions
+    Return a list of tuples (session_name, window_index, pane_id, pid) for
+    processes running in tmux sessions
     """
     logger = logging.getLogger(__name__)
     result = []
-    tmux_data = subprocess.check_output([tmux_exec, 'list-windows', '-F',
-                '#{session_name}:#{window_index}:#{pane_pid}', '-a'])
+    tmux_data = subprocess.check_output([tmux_exec, 'list-panes', '-F',
+                '#{session_name}:#{window_index}:#{pane_id}:#{pane_pid}',
+                '-a'])
     for line in tmux_data.splitlines():
-        session_name, window_index, pid = line.split(":")
-        result.append((session_name, int(window_index), int(pid)))
-    logger.debug("Detected tmux windows %s", str(result))
+        session_name, window_index, pane_id, pid = line.split(":")
+        result.append((session_name, int(window_index), pane_id, int(pid)))
+    logger.debug("Detected tmux panes %s", str(result))
     return result
 
 
@@ -133,12 +141,12 @@ def main(argv=None):
         logger.debug("START with LINE_NR=%d, TEXFILE=%s", line_nr, filename)
         tmux_target = find_vim(filename, options.tmux)
         if tmux_target is not None:
-            session_name, window_index = tmux_target
-            jump_to(options.tmux, session_name, window_index, line_nr)
+            session_name, window_index, pane_id = tmux_target
+            jump_to(options.tmux, session_name, window_index, pane_id, line_nr)
         else:
-            logger.warn('Could not find tmux window with vim editing %s',
+            logger.warn('Could not find tmux pane with vim editing %s',
                         filename)
-    except Exception, e:
+    except Exception:
         logger.error('Could not jump to intended target', exc_info=True)
     logger.debug("DONE")
     return 0
