@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Jump to a position in a .tex file that is open in vim in a tmux pane."""
 
-__version__ = '1.0.0'
+__version__ = '1.0.1'
 __author__ = "Michael Goerz <mail@michaelgoerz.net>"
 
 import subprocess
