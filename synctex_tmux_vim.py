@@ -51,7 +51,11 @@ def check_process(pid, filename):
                          pid, open_file)
     else:
         logger.debug("Process %d is not running vim", pid)
-        for child_pid in p.get_children():
+        try:
+            children = p.get_children()
+        except AttributeError:
+            children = p.children()
+        for child_pid in children:
             result = check_process(child_pid.pid, filename)
             if result:
                 return result
@@ -95,7 +99,7 @@ def tmux_processes(tmux_exec):
     result = []
     tmux_data = subprocess.check_output([tmux_exec, 'list-panes', '-F',
                 '#{session_name}:#{window_index}:#{pane_id}:#{pane_pid}',
-                '-a'])
+                '-a'], universal_newlines=True)
     for line in tmux_data.splitlines():
         session_name, window_index, pane_id, pid = line.split(":")
         result.append((session_name, int(window_index), pane_id, int(pid)))
