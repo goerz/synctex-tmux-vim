@@ -40,7 +40,7 @@ def check_process(pid, filename):
     p = psutil.Process(pid)
     cwd = p.cwd()
     cmd = p.cmdline()
-    if cmd[0] == 'vim':
+    if cmd[0] in ['vim', 'nvim']:
         open_file = os.path.abspath(os.path.join(cwd, cmd[-1]))
         if open_file == filename:
             logger.debug("Process %d is running vim, with correct filename %s",
